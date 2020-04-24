@@ -1,8 +1,8 @@
-#python qualys3.py -f scan.csv -i "SSL/TLS Server supports TLSv1.0"
+#python qualys.py -f scan.csv -i "SSL/TLS Server supports TLSv1.0"
 #imprime toda la informacion de los activos afectados por esa vulnerabilidad
 
-#python qualys3.py -f scan.csv -i "SSL/TLS Server supports TLSv1.0" --hostlist
+#python qualys.py -f scan.csv -i "SSL/TLS Server supports TLSv1.0" --hostlist
 #imprime host:port
 
-#python qualys3.py -f scan.csv -i "SSL/TLS Server supports TLSv1.0" --titles
+#python qualys.py -f scan.csv -i "SSL/TLS Server supports TLSv1.0" --titles
 #imprime lista de vulnerabiulidades, las mas criticas primero
