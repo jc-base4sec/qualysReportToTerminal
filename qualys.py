@@ -1,7 +1,7 @@
 # Professional Services Qualys Report Tool
 # Organization: Base4 Security
 # Author: Juan Cruz Tommasi
-# Date: 24/04/2020
+# Date: 20/05/2020
 
 import os
 import requests
@@ -124,7 +124,7 @@ def cveFullInfo(api_response, issue):
 
 def getCVEnfo(cve):
     # Add your personal API key here
-    personalApiKey = '133633de4e1eeabc95cded5d2d2ab199'
+    personalApiKey = 'YOUR API KEY HERE'
     # Set HTTP Header
     headers = {'X-VulDB-ApiKey': personalApiKey}
     # URL VulDB endpoint
