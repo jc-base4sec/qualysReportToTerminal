@@ -81,6 +81,10 @@ def cveFullInfo(api_response, issue):
     api_response = api_response.json()
     results = api_response.get('result')
 
+    if results == None:
+        beautyText('API quota/limit excedida')
+        exit()
+
     #divided
     entry = results[0].get('entry')
     vulninfo = results[0].get('vulnerability')
@@ -120,7 +124,7 @@ def cveFullInfo(api_response, issue):
 
 def getCVEnfo(cve):
     # Add your personal API key here
-    personalApiKey = '7a08875b4df6b2b6dd8a97944181b82c'
+    personalApiKey = '133633de4e1eeabc95cded5d2d2ab199'
     # Set HTTP Header
     headers = {'X-VulDB-ApiKey': personalApiKey}
     # URL VulDB endpoint
