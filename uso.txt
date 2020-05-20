@@ -1,8 +1,14 @@
-#python qualys.py -f scan.csv -i "SSL/TLS Server supports TLSv1.0"
-#imprime toda la informacion de los activos afectados por esa vulnerabilidad
+python qualys.py -f scan.csv --titles
+#imprime lista de vulnerabiulidades, las mas criticas primero. changelog: se agregó un campo con el identificador CVE
 
-#python qualys.py -f scan.csv -i "SSL/TLS Server supports TLSv1.0" --hostlist
+python qualys.py -f scan.csv -c "CVE-2004-0230"
+#Imprime info de vulndb, traduciendola con la api de google, con todo lo basico y necesario para la tabla de vulnerabilidad en plantilla de Word.
+
+python qualys.py -f scan.csv -i "SSL/TLS Server supports TLSv1.0"
+#imprime toda la informacion de los activos afectados por esa vulnerabilidad, junto a su sistema operativo, puerto, ip
+
+python qualys.py -f scan.csv -i "SSL/TLS Server supports TLSv1.0" --hostlist
 #imprime host:port
 
-#python qualys.py -f scan.csv -i "SSL/TLS Server supports TLSv1.0" --titles
-#imprime lista de vulnerabiulidades, las mas criticas primero
+python qualys.py -f scan.csv -i "SSH Server Public Key Too Small" --full
+#Imprime info de vulndb, traduciendola con la api de google, con todo lo basico y necesario para la tabla de vulnerabilidad en plantilla de Word.
