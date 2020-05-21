@@ -1,15 +1,18 @@
 # Professional Services Qualys Report Tool
 # Organization: Base4 Security
 # Author: Juan Cruz Tommasi
-# Date: 20/05/2020
+# Date: 24/04/2020
 
 import os
 import requests
+import time
 from tabulate import tabulate
 from argparse import ArgumentParser
 from googletrans import Translator
 
 #INIT DATABASE
+keysList = []
+key_attempts = 0
 fulldatabase = []
 matchedLinesList = []
 vulns_db = []
@@ -54,7 +57,9 @@ def beautyText(text):
 
 
 parser = ArgumentParser(description='Qualys CSV Scan Parser - Base4 Security')
-parser.add_argument('-f', '--filename', type=str, metavar='',required=True, help='report.csv file path')
+parser.add_argument('-f', '--filename', type=str, metavar='',required=False, default=False, help='report.csv file path')
+parser.add_argument('-fc', '--cvefile', type=str, metavar='',required=False, default=False, help='cve file to get cvss')
+parser.add_argument('-k', '--keysfile', type=str, metavar='',required=True, default=False, help='api keys file')
 parser.add_argument('-i', '--issue', type=str, metavar='', required=False, default=False, help='Title of issue or vulnerability')
 parser.add_argument('--hostlist', type=str2bool, nargs='?', const=True, default=False, help='Print only host:port')
 parser.add_argument('--titles', type=str2bool, nargs='?', const=True, default=False, help='Print Only Titles List')
@@ -62,9 +67,6 @@ parser.add_argument('--full', type=str2bool, nargs='?', const=True, default=Fals
 parser.add_argument('-c','--cve', type=str, nargs='?', required=False, default=False, help='Print all information about vulnerability from cve')
 parser.add_argument('-d', '--debug', type=int, metavar='', required=False, help='debug value')
 args = parser.parse_args()
-
-filename = args.filename
-issue = args.issue
 
 def printVulnFullBanner():
     print(  "\n\n┌─┐┬ ┬┬  ┬    ┬─┐┌─┐┌─┐┌─┐┬─┐┌┬┐\n"
@@ -77,12 +79,9 @@ def translateFromGoogle(text):
     return translated.text
 
 def cveFullInfo(api_response, issue):
-    #all data of vuln
-    api_response = api_response.json()
-    results = api_response.get('result')
-
+    results = api_response
     if results == None:
-        beautyText('API quota/limit excedida')
+        print('Hubo un problema al consultar la API, probablemente la quota ha sido excedida')
         exit()
 
     #divided
@@ -122,16 +121,40 @@ def cveFullInfo(api_response, issue):
         advisory_text = "obtener mas información sobre la vulnerabilidad en %s - O buscando información sobre el autor del hallazgo: %s at %s" % (advisory['url'],advisory['person']['name'],advisory['company']['name'])
         print("O tambien puede %s\n" % advisory_text)
 
-def getCVEnfo(cve):
-    # Add your personal API key here
-    personalApiKey = 'YOUR API KEY HERE'
-    # Set HTTP Header
-    headers = {'X-VulDB-ApiKey': personalApiKey}
-    # URL VulDB endpoint
-    url = 'https://vuldb.com/?api'
-    postData = {'advancedsearch': 'cve:'+cve,'details' : 1}
-    # Get API response
-    response = requests.post(url,headers=headers,data=postData)
+def getCVSSfromFile(file):
+    cvss_temp_db = []
+    j = open(file, 'r')
+    for line in j:
+        line = line.strip()
+        if len(line) > 2:
+            results = API_call_with_multiple_keys(line)
+            score = results[0].get('vulnerability')
+            cvss3_basescore = score['cvss3']['meta']['basescore']
+            cvss3_basevector = score['cvss3']['vuldb']['basevector']
+            nvd_url = 'https://nvd.nist.gov/vuln-metrics/cvss/v3-calculator?vector='+cvss3_basevector+'&version=3.1'
+            complete_line = cvss3_basescore + " - " + line +" # "+ nvd_url
+            print(complete_line)
+        else:
+            print('NO CVE PARA ESTA LINEA')
+
+def API_call_with_multiple_keys(cve):
+    global key_attempts
+    response = None
+    while response is None:
+        headers = {'X-VulDB-ApiKey': keysList[key_attempts]}
+        url = 'https://vuldb.com/?api'
+        postData = {'advancedsearch': 'cve:'+cve,'details':1}
+        response = requests.post(url,headers=headers,data=postData)
+        response = response.json()
+        if not isinstance(response, list):
+            response = response.get('result')
+        if response is None:
+            key_attempts = key_attempts + 1
+            if key_attempts == len(keysList):
+                print('[!] Se ha intentado hacer la llamada desde %i keys distintas sin éxito, puede que la quota de todas las llaves esten agotadas, o que vuldb este bloqueando nuestras requests ya que el uso de multiples llaves esta prohibido, usar con discreción.. ' % (key_attempts))
+                exit()
+            print('[!] Se ha intentado hacer la llamada desde %i keys distintas sin éxito, puede que la quota de todas las llaves esten agotadas, reintentando con la proxima llave %s' % (key_attempts, keysList[key_attempts]))
+    time.sleep(6)
     return response
 
 def saveVulnData(filename, issue):
@@ -182,14 +205,27 @@ def saveAllVulnsData(filename):
             vulns_threat.insert(len(vulns_db), line[24])
             vulns_impact.insert(len(vulns_db), line[25])
 
-saveAllVulnsData(filename)
+filename = ''
+issue = args.issue
+
+if args.keysfile != False:
+    keys = open(args.keysfile, 'r', encoding="utf-8")
+    for key in keys:
+        keysList.insert(len(keysList), key.rstrip("\n"))
+
+if args.filename == False and args.cvefile == False and args.cve == False:
+    print('Debe ingresar un archivo para alimentar este script, use -f scan.csv // -fc para obtener el pntaje de una lista de CVE // -c para obtener full info sobre una vuln')
+    exit()
+elif args.filename != False:
+    filename = args.filename
+    saveAllVulnsData(filename)
+
 
 if args.hostlist == False and args.full == False and args.titles == True:
     fulldatabase = sorted(set(fulldatabase), reverse=True)
     for titulos in fulldatabase:
         print(titulos)
     exit()
-
 
 #AKA OTRO
 if issue != False or args.hostlist == True:
@@ -213,7 +249,7 @@ if args.full == True and args.issue != False and args.hostlist == False:
         if issue in titulo and "CVE" in titulo:
             cve = getCVEfromDB(titulo)
             cve = cve[7]
-            API_info = getCVEnfo(cve)
+            API_info = API_call_with_multiple_keys(cve)
             cveFullInfo(API_info, issue)
         else:
             print("\n[!!] Se desconoce CVE para la vulnerabilidad ingresada, un reporte completo no puede ser generado sin un identificador CVE\n")
@@ -221,5 +257,8 @@ if args.full == True and args.issue != False and args.hostlist == False:
 
 if args.cve != False:
     cve = args.cve
-    API_info = getCVEnfo(cve)
+    API_info = API_call_with_multiple_keys(cve)
     cveFullInfo(API_info, issue)
+
+if args.cvefile != False:
+    getCVSSfromFile(args.cvefile)
